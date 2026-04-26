@@ -76,7 +76,7 @@ class MinewBleModule: RCTEventEmitter {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
         // Try the provided password first, then fall back to secretKeys
         self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
-      case .vaildated:
+      case .validated:
         self.connected[mac] = peripheral
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
       default:

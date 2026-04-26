@@ -30,6 +30,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withMinewSdk",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       [
