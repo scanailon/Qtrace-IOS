@@ -6,7 +6,7 @@ class MinewBleModule: RCTEventEmitter {
   private let central = MTCentralManagerV3.sharedInstance()
   private var peripherals: [String: MTPeripheralV3] = [:]
   private var connected: [String: MTPeripheralV3] = [:]
-  private let secretKeys = ["minewtech1234567", "3141592653589793"]
+  private let secretKeys = ["minew123", "minewtech1234567", "3141592653589793"]
 
   override static func requiresMainQueueSetup() -> Bool { return true }
 
@@ -56,9 +56,8 @@ class MinewBleModule: RCTEventEmitter {
       return
     }
     central?.stopScan()
-    central?.connect(toPeriperal: peripheral)
 
-    // Connection: Disconnected=0, Connected=1, Connecting=2, Validating=3, Vaildated=4, VaildateFailed=5
+    // Register callback BEFORE connecting to avoid delegate-nil race condition
     peripheral.connector?.didChangeConnection { [weak self] connection in
       guard let self = self else { return }
       switch connection.rawValue {
@@ -71,7 +70,10 @@ class MinewBleModule: RCTEventEmitter {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
       case 3: // Validating
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
-        self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
+        // Demo requires 1s delay before writing password
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+          self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
+        }
       case 4: // Vaildated
         self.connected[mac] = peripheral
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
@@ -79,6 +81,8 @@ class MinewBleModule: RCTEventEmitter {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
       }
     }
+
+    central?.connect(toPeriperal: peripheral)
   }
 
   private func tryPassword(peripheral: MTPeripheralV3, mac: String, password: String, keyIndex: Int) {
