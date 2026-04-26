@@ -1,0 +1,403 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5A49FC04282CECFA002C75F0 /* PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin in Resources */ = {isa = PBXBuildFile; fileRef = 5A49FC03282CECFA002C75F0 /* PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin */; };
+		5A5FA3B326D90054009C1864 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A5FA3B226D90054009C1864 /* AppDelegate.m */; };
+		5A5FA3B926D90054009C1864 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A5FA3B826D90054009C1864 /* ViewController.m */; };
+		5A5FA3BC26D90054009C1864 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3BA26D90054009C1864 /* Main.storyboard */; };
+		5A5FA3BE26D90057009C1864 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3BD26D90057009C1864 /* Assets.xcassets */; };
+		5A5FA3C126D90057009C1864 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3BF26D90057009C1864 /* LaunchScreen.storyboard */; };
+		5A5FA3C426D90057009C1864 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A5FA3C326D90057009C1864 /* main.m */; };
+		5A5FA3D026D90170009C1864 /* MyTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A5FA3CF26D90170009C1864 /* MyTableViewCell.m */; };
+		5A5FA3D526D9017B009C1864 /* S4_OTA_ES009_20200909_v1_0_0.bin in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3D226D9017B009C1864 /* S4_OTA_ES009_20200909_v1_0_0.bin */; };
+		5A5FA3D626D9017B009C1864 /* S3_OTA_ES002_20201028_v1_0_18.bin in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3D326D9017B009C1864 /* S3_OTA_ES002_20201028_v1_0_18.bin */; };
+		5A5FA3D726D9017B009C1864 /* S3V2_NV900_20210312_s3_ota_v1_0_23.bin in Resources */ = {isa = PBXBuildFile; fileRef = 5A5FA3D426D9017B009C1864 /* S3V2_NV900_20210312_s3_ota_v1_0_23.bin */; };
+		5AC4132F28BF33FF00369D5D /* MTSensorV3Kit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4132D28BF33FB00369D5D /* MTSensorV3Kit.framework */; };
+		5AC4133028BF33FF00369D5D /* MTSensorV3Kit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4132D28BF33FB00369D5D /* MTSensorV3Kit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5A5FA3DD26D90F35009C1864 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5AC4133028BF33FF00369D5D /* MTSensorV3Kit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5A49FC03282CECFA002C75F0 /* PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin; sourceTree = "<group>"; };
+		5A5FA3AE26D90054009C1864 /* MTSensorV3KitDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MTSensorV3KitDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A5FA3B126D90054009C1864 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		5A5FA3B226D90054009C1864 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		5A5FA3B726D90054009C1864 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		5A5FA3B826D90054009C1864 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		5A5FA3BB26D90054009C1864 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		5A5FA3BD26D90057009C1864 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5A5FA3C026D90057009C1864 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		5A5FA3C226D90057009C1864 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5A5FA3C326D90057009C1864 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		5A5FA3CE26D90170009C1864 /* MyTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyTableViewCell.h; sourceTree = "<group>"; };
+		5A5FA3CF26D90170009C1864 /* MyTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyTableViewCell.m; sourceTree = "<group>"; };
+		5A5FA3D226D9017B009C1864 /* S4_OTA_ES009_20200909_v1_0_0.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = S4_OTA_ES009_20200909_v1_0_0.bin; sourceTree = "<group>"; };
+		5A5FA3D326D9017B009C1864 /* S3_OTA_ES002_20201028_v1_0_18.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = S3_OTA_ES002_20201028_v1_0_18.bin; sourceTree = "<group>"; };
+		5A5FA3D426D9017B009C1864 /* S3V2_NV900_20210312_s3_ota_v1_0_23.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = S3V2_NV900_20210312_s3_ota_v1_0_23.bin; sourceTree = "<group>"; };
+		5AC4132D28BF33FB00369D5D /* MTSensorV3Kit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MTSensorV3Kit.framework; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5A5FA3AB26D90054009C1864 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AC4132F28BF33FF00369D5D /* MTSensorV3Kit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5A5FA3A526D90054009C1864 = {
+			isa = PBXGroup;
+			children = (
+				5A5FA3B026D90054009C1864 /* MTSensorV3KitDemo */,
+				5A5FA3AF26D90054009C1864 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5A5FA3AF26D90054009C1864 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5A5FA3AE26D90054009C1864 /* MTSensorV3KitDemo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5A5FA3B026D90054009C1864 /* MTSensorV3KitDemo */ = {
+			isa = PBXGroup;
+			children = (
+				5AC4132D28BF33FB00369D5D /* MTSensorV3Kit.framework */,
+				5A5FA3D126D9017B009C1864 /* ipa */,
+				5A5FA3B126D90054009C1864 /* AppDelegate.h */,
+				5A5FA3B226D90054009C1864 /* AppDelegate.m */,
+				5A5FA3B726D90054009C1864 /* ViewController.h */,
+				5A5FA3B826D90054009C1864 /* ViewController.m */,
+				5A5FA3CE26D90170009C1864 /* MyTableViewCell.h */,
+				5A5FA3CF26D90170009C1864 /* MyTableViewCell.m */,
+				5A5FA3BA26D90054009C1864 /* Main.storyboard */,
+				5A5FA3BD26D90057009C1864 /* Assets.xcassets */,
+				5A5FA3BF26D90057009C1864 /* LaunchScreen.storyboard */,
+				5A5FA3C226D90057009C1864 /* Info.plist */,
+				5A5FA3C326D90057009C1864 /* main.m */,
+			);
+			path = MTSensorV3KitDemo;
+			sourceTree = "<group>";
+		};
+		5A5FA3D126D9017B009C1864 /* ipa */ = {
+			isa = PBXGroup;
+			children = (
+				5A49FC03282CECFA002C75F0 /* PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin */,
+				5A5FA3D226D9017B009C1864 /* S4_OTA_ES009_20200909_v1_0_0.bin */,
+				5A5FA3D326D9017B009C1864 /* S3_OTA_ES002_20201028_v1_0_18.bin */,
+				5A5FA3D426D9017B009C1864 /* S3V2_NV900_20210312_s3_ota_v1_0_23.bin */,
+			);
+			path = ipa;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5A5FA3AD26D90054009C1864 /* MTSensorV3KitDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A5FA3C726D90057009C1864 /* Build configuration list for PBXNativeTarget "MTSensorV3KitDemo" */;
+			buildPhases = (
+				5A5FA3AA26D90054009C1864 /* Sources */,
+				5A5FA3AB26D90054009C1864 /* Frameworks */,
+				5A5FA3AC26D90054009C1864 /* Resources */,
+				5A5FA3DD26D90F35009C1864 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MTSensorV3KitDemo;
+			productName = MTSensorV3KitDemo;
+			productReference = 5A5FA3AE26D90054009C1864 /* MTSensorV3KitDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5A5FA3A626D90054009C1864 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1250;
+				TargetAttributes = {
+					5A5FA3AD26D90054009C1864 = {
+						CreatedOnToolsVersion = 12.5.1;
+					};
+				};
+			};
+			buildConfigurationList = 5A5FA3A926D90054009C1864 /* Build configuration list for PBXProject "MTSensorV3KitDemo" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5A5FA3A526D90054009C1864;
+			productRefGroup = 5A5FA3AF26D90054009C1864 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5A5FA3AD26D90054009C1864 /* MTSensorV3KitDemo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5A5FA3AC26D90054009C1864 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A5FA3D526D9017B009C1864 /* S4_OTA_ES009_20200909_v1_0_0.bin in Resources */,
+				5A5FA3C126D90057009C1864 /* LaunchScreen.storyboard in Resources */,
+				5A5FA3D726D9017B009C1864 /* S3V2_NV900_20210312_s3_ota_v1_0_23.bin in Resources */,
+				5A5FA3BE26D90057009C1864 /* Assets.xcassets in Resources */,
+				5A5FA3D626D9017B009C1864 /* S3_OTA_ES002_20201028_v1_0_18.bin in Resources */,
+				5A49FC04282CECFA002C75F0 /* PB2143B_NV900_20220311_mst01_v3_ota_3_0_3.bin in Resources */,
+				5A5FA3BC26D90054009C1864 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5A5FA3AA26D90054009C1864 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A5FA3B926D90054009C1864 /* ViewController.m in Sources */,
+				5A5FA3D026D90170009C1864 /* MyTableViewCell.m in Sources */,
+				5A5FA3B326D90054009C1864 /* AppDelegate.m in Sources */,
+				5A5FA3C426D90057009C1864 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		5A5FA3BA26D90054009C1864 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A5FA3BB26D90054009C1864 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		5A5FA3BF26D90057009C1864 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A5FA3C026D90057009C1864 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		5A5FA3C526D90057009C1864 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		5A5FA3C626D90057009C1864 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5A5FA3C826D90057009C1864 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 646P9H983T;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = MTSensorV3KitDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = minew.MTSensorV3KitDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5A5FA3C926D90057009C1864 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 646P9H983T;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = MTSensorV3KitDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = minew.MTSensorV3KitDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5A5FA3A926D90054009C1864 /* Build configuration list for PBXProject "MTSensorV3KitDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A5FA3C526D90057009C1864 /* Debug */,
+				5A5FA3C626D90057009C1864 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A5FA3C726D90057009C1864 /* Build configuration list for PBXNativeTarget "MTSensorV3KitDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A5FA3C826D90057009C1864 /* Debug */,
+				5A5FA3C926D90057009C1864 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5A5FA3A626D90054009C1864 /* Project object */;
+}

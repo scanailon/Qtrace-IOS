@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "QTrace",
+    "slug": "QTrace",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Se necesita Bluetooth para conectar sensores de temperatura Minew MST03.",
+        "NSBluetoothPeripheralUsageDescription": "Se necesita Bluetooth para conectar sensores de temperatura Minew MST03."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Se necesita la cámara para escanear el código QR del sensor."
+        }
+      ]
+    ]
+  }
+}

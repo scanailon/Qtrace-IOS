@@ -1,0 +1,6 @@
+framework module MTSensorV3Kit {
+  umbrella header "MTSensorV3Kit.h"
+
+  export *
+  module * { export * }
+}
