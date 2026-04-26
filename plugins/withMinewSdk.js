@@ -91,7 +91,7 @@ const withMinewXcode = (config) => {
     }
 
     // --- Add native source files to the main target ---
-    const targetUuid = xcodeProject.getFirstTarget().uuid;
+    const groupKey = xcodeProject.findPBXGroupKey({ name: projectName });
     for (const file of NATIVE_FILES) {
       const filePath = `${projectName}/${file}`;
       const alreadyAdded = Object.values(xcodeProject.pbxFileReferenceSection() || {}).find(
@@ -99,7 +99,10 @@ const withMinewXcode = (config) => {
       );
 
       if (!alreadyAdded) {
-        xcodeProject.addSourceFile(filePath, { target: targetUuid });
+        const fileRef = xcodeProject.addFile(filePath, groupKey, {});
+        if (fileRef) {
+          xcodeProject.addToPbxSourcesBuildPhase(fileRef);
+        }
       }
     }
 
