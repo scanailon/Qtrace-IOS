@@ -4,6 +4,7 @@ const {
 } = require('@expo/config-plugins');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 const FRAMEWORK_SRC = path.join(
   __dirname,
@@ -43,6 +44,9 @@ const withMinewFiles = (config) => {
       // Copy MTSensorV3Kit.framework -> ios/Frameworks/MTSensorV3Kit.framework
       const frameworkDest = path.join(iosDir, 'Frameworks', 'MTSensorV3Kit.framework');
       copyDir(FRAMEWORK_SRC, frameworkDest);
+
+      // Convert binary plists inside the framework to XML so CocoaPods can read them
+      execSync(`find "${frameworkDest}" -name "*.plist" -exec plutil -convert xml1 {} \\;`);
 
       // Copy native bridge files -> ios/<ProjectName>/
       const targetDir = path.join(iosDir, projectName);
