@@ -100,20 +100,31 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
 
     const foundSub = MinewBle.onDeviceFound((deviceList) => {
       console.log('[BLE] onDeviceFound fired, devices:', JSON.stringify(deviceList));
-      const match = deviceList.find(
+      // Match by MAC first; fall back to strongest signal if MAC not found
+      let match = deviceList.find(
         (d) => d.mac?.toUpperCase() === mac.toUpperCase()
       );
+      if (!match && deviceList.length > 0) {
+        // Use device with best RSSI as fallback
+        match = deviceList.reduce((best, d) =>
+          (d.rssi ?? -999) > (best.rssi ?? -999) ? d : best
+        );
+        console.log('[BLE] MAC not found, using closest device:', match?.mac);
+      }
       console.log('[BLE] Looking for MAC:', mac, '| match:', match ? 'YES' : 'NO');
       if (!match) return;
 
+      const bleMac = match.mac; // use actual BLE MAC, may differ from QR MAC
+      activeMac = bleMac;
       setBleStatus('connecting');
-      setBleMessage(`Conectando a ${mac}…`);
+      setBleMessage(`Conectando a ${bleMac}…`);
       MinewBle.stopScan();
-      MinewBle.connect(mac);
+      MinewBle.connect(bleMac);
     });
 
+    let activeMac = mac; // updated to real BLE mac once found
     const connSub = MinewBle.onConnStateChange(({ mac: m, state }) => {
-      if (m?.toUpperCase() !== mac.toUpperCase()) return;
+      if (m?.toUpperCase() !== activeMac.toUpperCase()) return;
       if (state === 'ConnectComplete') {
         setBleStatus('connected');
         setBleMessage('Conectado');
