@@ -99,9 +99,11 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
     setBleMessage(`Buscando sensor ${mac}…`);
 
     const foundSub = MinewBle.onDeviceFound((deviceList) => {
+      console.log('[BLE] onDeviceFound fired, devices:', JSON.stringify(deviceList));
       const match = deviceList.find(
         (d) => d.mac?.toUpperCase() === mac.toUpperCase()
       );
+      console.log('[BLE] Looking for MAC:', mac, '| match:', match ? 'YES' : 'NO');
       if (!match) return;
 
       setBleStatus('connecting');
@@ -145,6 +147,7 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
     });
 
     bleSubscriptions.current = [foundSub, connSub];
+    console.log('[BLE] isSupported:', MinewBle.isSupported, '| Starting scan for:', mac);
     MinewBle.startScan();
 
     // Auto timeout after 20 s
