@@ -124,9 +124,6 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
       activeMac = bleMac;
       setBleStatus('connecting');
       setBleMessage(`Conectando a ${bleMac}…`);
-      // Do NOT call stopScan() before connect — the SDK needs its internal
-      // scanned-peripherals map intact to set CBPeripheral.delegate correctly.
-      // stopScan is called by the native module after CoreBluetooth connects.
       MinewBle.connect(bleMac);
     });
 

@@ -17,7 +17,12 @@ const FRAMEWORK_SRC = path.join(
 
 const NATIVE_SRC = path.join(__dirname, '..', 'ios_native');
 
-const NATIVE_FILES = ['MinewBleModule.swift', 'MinewBleModule.m'];
+const NATIVE_FILES = [
+  'MinewBleModule.swift',
+  'MinewBleModule.m',
+  'MinewBleProxyDelegate.h',
+  'MinewBleProxyDelegate.m',
+];
 
 // Copies a directory recursively
 function copyDir(src, dest) {
@@ -58,7 +63,7 @@ const withMinewFiles = (config) => {
       const bridgingHeaderPath = path.join(targetDir, `${projectName}-Bridging-Header.h`);
       fs.writeFileSync(
         bridgingHeaderPath,
-        '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTSensorV3Kit/MTSensorV3Kit.h>\n'
+        '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTSensorV3Kit/MTSensorV3Kit.h>\n#import "MinewBleProxyDelegate.h"\n'
       );
 
       return cfg;
