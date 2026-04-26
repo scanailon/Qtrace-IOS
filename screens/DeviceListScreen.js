@@ -183,6 +183,7 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
     // MAC can come as "AA:BB:CC:DD:EE:FF" or "AABBCCDDEEFF"
     const raw = (data || '').trim().toUpperCase();
     const mac = raw.includes(':') ? raw : raw.replace(/(.{2})(?=.)/g, '$1:');
+    console.log('[QR] raw data:', data, '| parsed MAC:', mac);
     startBleForMac(mac);
   };
 
