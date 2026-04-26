@@ -19,7 +19,6 @@ class MinewBleModule: RCTEventEmitter {
   @objc func startScan() {
     peripherals.removeAll()
 
-    // PowerState: Unknown=0, PoweredOff=1, PoweredOn=2
     central?.didChangesBluetoothStatus { [weak self] state in
       guard let self = self else { return }
       let status = state.rawValue == 2 ? "poweredOn" : "poweredOff"
@@ -56,29 +55,34 @@ class MinewBleModule: RCTEventEmitter {
       return
     }
     central?.stopScan()
-    // Demo order: connect first, then register callback
-    central?.connect(toPeriperal: peripheral)
 
-    peripheral.connector?.didChangeConnection { [weak self] connection in
+    // Allow scan to fully stop before initiating connection
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
       guard let self = self else { return }
-      switch connection.rawValue {
-      case 0: // Disconnected
-        self.connected.removeValue(forKey: mac)
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Disconnected"])
-      case 2: // Connecting
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connecting"])
-      case 1: // Connected
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
-      case 3: // Validating
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-          self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
+      self.central?.connect(toPeriperal: peripheral)
+      print("[BLE] connector is nil: \(peripheral.connector == nil)")
+
+      peripheral.connector?.didChangeConnection { [weak self] connection in
+        guard let self = self else { return }
+        switch connection.rawValue {
+        case 0: // Disconnected
+          self.connected.removeValue(forKey: mac)
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Disconnected"])
+        case 2: // Connecting
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connecting"])
+        case 1: // Connected
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
+        case 3: // Validating
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
+          DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
+          }
+        case 4: // Vaildated
+          self.connected[mac] = peripheral
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
+        default: // VaildateFailed, PasswordVaildateFailed
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
         }
-      case 4: // Vaildated
-        self.connected[mac] = peripheral
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
-      default: // VaildateFailed, PasswordVaildateFailed
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
       }
     }
   }
@@ -117,9 +121,7 @@ class MinewBleModule: RCTEventEmitter {
     formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
     formatter.timeZone = TimeZone.current
 
-    // MTHTModel: PR2122=0, MST01=1
     let modelType = MTHTModel(rawValue: UInt(htModel == 0 ? 0 : 1)) ?? MTHTModel(rawValue: 1)!
-    // MTTemperatureUnitType: Celsius=0
     let unitType = MTTemperatureUnitType(rawValue: 0)!
 
     peripheral.connector?.sensorHandler.readHTHistory(

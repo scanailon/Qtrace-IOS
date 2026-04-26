@@ -117,7 +117,8 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
         console.log('[BLE] MAC not found, best prefix match:', match?.mac);
       }
       console.log('[BLE] Looking for MAC:', mac, '| match:', match ? 'YES' : 'NO');
-      if (!match) return;
+      if (!match || connecting) return;
+      connecting = true;
 
       const bleMac = match.mac; // use actual BLE MAC, may differ from QR MAC
       activeMac = bleMac;
@@ -128,6 +129,7 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
     });
 
     let activeMac = mac; // updated to real BLE mac once found
+    let connecting = false;
     const connSub = MinewBle.onConnStateChange(({ mac: m, state }) => {
       if (m?.toUpperCase() !== activeMac.toUpperCase()) return;
       if (state === 'ConnectComplete') {
