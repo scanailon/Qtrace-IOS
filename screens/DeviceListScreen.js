@@ -105,11 +105,16 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
         (d) => d.mac?.toUpperCase() === mac.toUpperCase()
       );
       if (!match && deviceList.length > 0) {
-        // Use device with best RSSI as fallback
-        match = deviceList.reduce((best, d) =>
-          (d.rssi ?? -999) > (best.rssi ?? -999) ? d : best
-        );
-        console.log('[BLE] MAC not found, using closest device:', match?.mac);
+        // Fall back to device sharing most MAC prefix bytes with scanned MAC
+        const macBytes = mac.split(':');
+        match = deviceList.reduce((best, d) => {
+          const dBytes = (d.mac || '').split(':');
+          const score = macBytes.filter((b, i) => b === dBytes[i]).length;
+          const bestBytes = (best?.mac || '').split(':');
+          const bestScore = macBytes.filter((b, i) => b === bestBytes[i]).length;
+          return score > bestScore ? d : best;
+        }, null);
+        console.log('[BLE] MAC not found, best prefix match:', match?.mac);
       }
       console.log('[BLE] Looking for MAC:', mac, '| match:', match ? 'YES' : 'NO');
       if (!match) return;
