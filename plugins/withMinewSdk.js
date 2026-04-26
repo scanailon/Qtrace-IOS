@@ -107,7 +107,8 @@ const withMinewXcode = (config) => {
 
       if (!alreadyAdded) {
         const fileRef = xcodeProject.addFile(filePath, groupKey, {});
-        if (fileRef) {
+        // Only .swift and .m files go to Compile Sources; headers do not.
+        if (fileRef && !file.endsWith('.h')) {
           xcodeProject.addToPbxSourcesBuildPhase(fileRef);
         }
       }
