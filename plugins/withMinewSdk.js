@@ -10,6 +10,7 @@ const FRAMEWORK_SRC = path.join(
   '..',
   'sdkMinew',
   'MinewSensorKitForV3',
+  'MTSensorV3KitDemo',
   'MTSensorV3Kit.framework'
 );
 
