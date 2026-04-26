@@ -54,14 +54,12 @@ const withMinewFiles = (config) => {
         fs.copyFileSync(path.join(NATIVE_SRC, file), path.join(targetDir, file));
       }
 
-      // Create Bridging Header if missing
+      // Create/overwrite Bridging Header with React Native + MTSensorV3Kit imports
       const bridgingHeaderPath = path.join(targetDir, `${projectName}-Bridging-Header.h`);
-      if (!fs.existsSync(bridgingHeaderPath)) {
-        fs.writeFileSync(
-          bridgingHeaderPath,
-          '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n'
-        );
-      }
+      fs.writeFileSync(
+        bridgingHeaderPath,
+        '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTSensorV3Kit/MTSensorV3Kit.h>\n'
+      );
 
       return cfg;
     },
