@@ -56,8 +56,9 @@ class MinewBleModule: RCTEventEmitter {
       return
     }
     central?.stopScan()
+    // Demo order: connect first, then register callback
+    central?.connect(toPeriperal: peripheral)
 
-    // Register callback BEFORE connecting to avoid delegate-nil race condition
     peripheral.connector?.didChangeConnection { [weak self] connection in
       guard let self = self else { return }
       switch connection.rawValue {
@@ -70,7 +71,6 @@ class MinewBleModule: RCTEventEmitter {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
       case 3: // Validating
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
-        // Demo requires 1s delay before writing password
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
           self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
         }
@@ -81,8 +81,6 @@ class MinewBleModule: RCTEventEmitter {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
       }
     }
-
-    central?.connect(toPeriperal: peripheral)
   }
 
   private func tryPassword(peripheral: MTPeripheralV3, mac: String, password: String, keyIndex: Int) {
