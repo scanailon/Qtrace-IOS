@@ -162,8 +162,10 @@ const withMinewXcode = (config) => {
   });
 };
 
-// Appends a post_install hook that sets C++20 on all Pod targets.
+// Injects C++20 standard into the existing post_install block.
 // Required for React Native 0.76+ which uses fmt's FMT_STRING (consteval, C++20).
+// CocoaPods does not allow multiple post_install blocks, so we insert inside the
+// existing one by locating the last `\nend` in the Podfile.
 const withCxx20Podfile = (config) => {
   return withDangerousMod(config, [
     'ios',
@@ -175,20 +177,21 @@ const withCxx20Podfile = (config) => {
       const marker = '# [MinewSdk] C++20 for fmt/FMT_STRING';
       if (content.includes(marker)) return cfg;
 
-      const hook = [
-        '',
-        marker,
-        'post_install do |installer|',
+      const injection = [
+        `  ${marker}`,
         '  installer.pods_project.targets.each do |target|',
         '    target.build_configurations.each do |config|',
         "      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
         '    end',
         '  end',
-        'end',
-        '',
       ].join('\n');
 
-      fs.appendFileSync(podfilePath, hook);
+      // Insert before the last `\nend` in the file, which closes post_install.
+      const lastEnd = content.lastIndexOf('\nend');
+      if (lastEnd === -1) return cfg;
+      content = content.slice(0, lastEnd) + '\n' + injection + content.slice(lastEnd);
+
+      fs.writeFileSync(podfilePath, content);
       return cfg;
     },
   ]);
