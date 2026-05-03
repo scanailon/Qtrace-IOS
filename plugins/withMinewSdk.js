@@ -203,6 +203,9 @@ const withCxx20Podfile = (config) => {
           '    installer.pods_project.targets.each do |target|',
           '      target.build_configurations.each do |config|',
           "        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+          "        if target.name == 'fmt'",
+          "          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -DFMT_USE_CONSTEVAL=0'",
+          '        end',
           '      end',
           '    end',
         ];
