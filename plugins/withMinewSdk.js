@@ -162,9 +162,42 @@ const withMinewXcode = (config) => {
   });
 };
 
+// Appends a post_install hook that sets C++20 on all Pod targets.
+// Required for React Native 0.76+ which uses fmt's FMT_STRING (consteval, C++20).
+const withCxx20Podfile = (config) => {
+  return withDangerousMod(config, [
+    'ios',
+    async (cfg) => {
+      const podfilePath = require('path').join(cfg.modRequest.platformProjectRoot, 'Podfile');
+      if (!fs.existsSync(podfilePath)) return cfg;
+
+      let content = fs.readFileSync(podfilePath, 'utf8');
+      const marker = '# [MinewSdk] C++20 for fmt/FMT_STRING';
+      if (content.includes(marker)) return cfg;
+
+      const hook = [
+        '',
+        marker,
+        'post_install do |installer|',
+        '  installer.pods_project.targets.each do |target|',
+        '    target.build_configurations.each do |config|',
+        "      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+        '    end',
+        '  end',
+        'end',
+        '',
+      ].join('\n');
+
+      fs.appendFileSync(podfilePath, hook);
+      return cfg;
+    },
+  ]);
+};
+
 const withMinewSdk = (config) => {
   config = withMinewFiles(config);
   config = withMinewXcode(config);
+  config = withCxx20Podfile(config);
   return config;
 };
 
