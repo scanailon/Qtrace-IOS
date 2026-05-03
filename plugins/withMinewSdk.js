@@ -178,31 +178,33 @@ const withCxx20Podfile = (config) => {
       if (content.includes(marker)) return cfg;
 
       const lines = content.split('\n');
-      let inPostInstall = false;
       let insertIdx = -1;
+      let inRnPostInstall = false;
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!inPostInstall) {
-          // post_install is always a top-level block (no indentation)
-          if (/^post_install\s+do/.test(line)) inPostInstall = true;
+        const trimmed = lines[i].trim();
+        if (!inRnPostInstall) {
+          // react_native_post_install( is always inside post_install do |installer|
+          if (trimmed.startsWith('react_native_post_install(')) {
+            inRnPostInstall = true;
+          }
           continue;
         }
-        // post_install is top-level so its closing `end` has no leading whitespace
-        if (/^end\b/.test(line)) {
-          insertIdx = i;
+        // Find the standalone closing ) of react_native_post_install(...)
+        if (trimmed === ')') {
+          insertIdx = i + 1; // insert on the line after the closing paren
           break;
         }
       }
 
       if (insertIdx !== -1) {
         const injection = [
-          `  ${marker}`,
-          '  installer.pods_project.targets.each do |target|',
-          '    target.build_configurations.each do |config|',
-          "      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+          `    ${marker}`,
+          '    installer.pods_project.targets.each do |target|',
+          '      target.build_configurations.each do |config|',
+          "        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+          '      end',
           '    end',
-          '  end',
         ];
         lines.splice(insertIdx, 0, ...injection);
         fs.writeFileSync(podfilePath, lines.join('\n'));
