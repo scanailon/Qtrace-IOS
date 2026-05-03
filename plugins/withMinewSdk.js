@@ -170,7 +170,7 @@ const withCxx20Podfile = (config) => {
   return withDangerousMod(config, [
     'ios',
     async (cfg) => {
-      const podfilePath = require('path').join(cfg.modRequest.platformProjectRoot, 'Podfile');
+      const podfilePath = path.join(cfg.modRequest.platformProjectRoot, 'Podfile');
       if (!fs.existsSync(podfilePath)) return cfg;
 
       let content = fs.readFileSync(podfilePath, 'utf8');
@@ -179,30 +179,19 @@ const withCxx20Podfile = (config) => {
 
       const lines = content.split('\n');
       let inPostInstall = false;
-      let depth = 0;
       let insertIdx = -1;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        const trimmed = line.trim();
-
         if (!inPostInstall) {
-          if (trimmed === 'post_install do |installer|') {
-            inPostInstall = true;
-            depth = 1; // the post_install block itself
-          }
+          // post_install is always a top-level block (no indentation)
+          if (/^post_install\s+do/.test(line)) inPostInstall = true;
           continue;
         }
-
-        // Track do/end depth inside the post_install block.
-        // Ruby blocks open with `do` at end of line; close with `end` at start.
-        if (!trimmed.startsWith('#') && /\bdo\s*(\|[^|]*\|)?\s*$/.test(line)) depth++;
-        if (/^\s*end\b/.test(line)) {
-          depth--;
-          if (depth === 0) {
-            insertIdx = i; // this line is the closing `end` of post_install
-            break;
-          }
+        // post_install is top-level so its closing `end` has no leading whitespace
+        if (/^end\b/.test(line)) {
+          insertIdx = i;
+          break;
         }
       }
 
