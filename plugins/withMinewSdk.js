@@ -162,10 +162,10 @@ const withMinewXcode = (config) => {
   });
 };
 
-// Injects C++20 standard into the existing post_install block.
-// Required for React Native 0.76+ which uses fmt's FMT_STRING (consteval, C++20).
-// CocoaPods does not allow multiple post_install blocks, so we insert inside the
-// existing one by locating the last `\nend` in the Podfile.
+// Injects C++20 standard inside the existing post_install block.
+// Required for React Native 0.76+ (fmt's FMT_STRING uses consteval, a C++20 feature).
+// Uses a line-by-line do/end depth counter to reliably find the closing `end`
+// of the post_install block regardless of block ordering in the Podfile.
 const withCxx20Podfile = (config) => {
   return withDangerousMod(config, [
     'ios',
@@ -177,21 +177,48 @@ const withCxx20Podfile = (config) => {
       const marker = '# [MinewSdk] C++20 for fmt/FMT_STRING';
       if (content.includes(marker)) return cfg;
 
-      const injection = [
-        `  ${marker}`,
-        '  installer.pods_project.targets.each do |target|',
-        '    target.build_configurations.each do |config|',
-        "      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
-        '    end',
-        '  end',
-      ].join('\n');
+      const lines = content.split('\n');
+      let inPostInstall = false;
+      let depth = 0;
+      let insertIdx = -1;
 
-      // Insert before the last `\nend` in the file, which closes post_install.
-      const lastEnd = content.lastIndexOf('\nend');
-      if (lastEnd === -1) return cfg;
-      content = content.slice(0, lastEnd) + '\n' + injection + content.slice(lastEnd);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
 
-      fs.writeFileSync(podfilePath, content);
+        if (!inPostInstall) {
+          if (trimmed === 'post_install do |installer|') {
+            inPostInstall = true;
+            depth = 1; // the post_install block itself
+          }
+          continue;
+        }
+
+        // Track do/end depth inside the post_install block.
+        // Ruby blocks open with `do` at end of line; close with `end` at start.
+        if (!trimmed.startsWith('#') && /\bdo\s*(\|[^|]*\|)?\s*$/.test(line)) depth++;
+        if (/^\s*end\b/.test(line)) {
+          depth--;
+          if (depth === 0) {
+            insertIdx = i; // this line is the closing `end` of post_install
+            break;
+          }
+        }
+      }
+
+      if (insertIdx !== -1) {
+        const injection = [
+          `  ${marker}`,
+          '  installer.pods_project.targets.each do |target|',
+          '    target.build_configurations.each do |config|',
+          "      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+          '    end',
+          '  end',
+        ];
+        lines.splice(insertIdx, 0, ...injection);
+        fs.writeFileSync(podfilePath, lines.join('\n'));
+      }
+
       return cfg;
     },
   ]);
