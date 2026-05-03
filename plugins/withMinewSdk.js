@@ -162,57 +162,49 @@ const withMinewXcode = (config) => {
   });
 };
 
-// Injects C++20 standard inside the existing post_install block.
-// Required for React Native 0.76+ (fmt's FMT_STRING uses consteval, a C++20 feature).
-// Uses a line-by-line do/end depth counter to reliably find the closing `end`
-// of the post_install block regardless of block ordering in the Podfile.
 const withCxx20Podfile = (config) => {
   return withDangerousMod(config, [
     'ios',
     async (cfg) => {
       const podfilePath = path.join(cfg.modRequest.platformProjectRoot, 'Podfile');
-      if (!fs.existsSync(podfilePath)) return cfg;
+      if (!fs.existsSync(podfilePath)) {
+        console.warn('[MinewSdk] Podfile not found at:', podfilePath);
+        return cfg;
+      }
 
       let content = fs.readFileSync(podfilePath, 'utf8');
       const marker = '# [MinewSdk] C++20 for fmt/FMT_STRING';
       if (content.includes(marker)) return cfg;
 
-      const lines = content.split('\n');
-      let insertIdx = -1;
-      let inRnPostInstall = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (!inRnPostInstall) {
-          // react_native_post_install( is always inside post_install do |installer|
-          if (trimmed.startsWith('react_native_post_install(')) {
-            inRnPostInstall = true;
-          }
-          continue;
-        }
-        // Find the standalone closing ) of react_native_post_install(...)
-        if (trimmed === ')') {
-          insertIdx = i + 1; // insert on the line after the closing paren
-          break;
-        }
+      // post_install is inside `target 'QTrace' do`. Its closing `end` is the
+      // first `\n  end` (2-space indent) that appears after `post_install do`.
+      const postInstallIdx = content.indexOf('post_install do |installer|');
+      if (postInstallIdx === -1) {
+        console.warn('[MinewSdk] post_install block not found in Podfile');
+        return cfg;
       }
 
-      if (insertIdx !== -1) {
-        const injection = [
-          `    ${marker}`,
-          '    installer.pods_project.targets.each do |target|',
-          '      target.build_configurations.each do |config|',
-          "        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
-          "        if target.name == 'fmt'",
-          "          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -DFMT_USE_CONSTEVAL=0'",
-          '        end',
-          '      end',
-          '    end',
-        ];
-        lines.splice(insertIdx, 0, ...injection);
-        fs.writeFileSync(podfilePath, lines.join('\n'));
+      const closingEndIdx = content.indexOf('\n  end', postInstallIdx);
+      if (closingEndIdx === -1) {
+        console.warn('[MinewSdk] closing end of post_install not found');
+        return cfg;
       }
 
+      const injection = [
+        `    ${marker}`,
+        '    installer.pods_project.targets.each do |target|',
+        '      target.build_configurations.each do |config|',
+        "        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'",
+        "        if target.name == 'fmt'",
+        "          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -DFMT_USE_CONSTEVAL=0'",
+        '        end',
+        '      end',
+        '    end',
+      ].join('\n');
+
+      content = content.slice(0, closingEndIdx) + '\n' + injection + content.slice(closingEndIdx);
+      fs.writeFileSync(podfilePath, content);
+      console.log('[MinewSdk] Injected C++20 + FMT_USE_CONSTEVAL=0 into Podfile');
       return cfg;
     },
   ]);
