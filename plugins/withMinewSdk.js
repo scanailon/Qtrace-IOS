@@ -66,6 +66,21 @@ const withMinewFiles = (config) => {
         '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTSensorV3Kit/MTSensorV3Kit.h>\n#import "MinewBleProxyDelegate.h"\n'
       );
 
+      // Ensure PrivacyInfo.xcprivacy exists so react_native_post_install can aggregate into it
+      const privacyInfoPath = path.join(targetDir, 'PrivacyInfo.xcprivacy');
+      if (!fs.existsSync(privacyInfoPath)) {
+        fs.writeFileSync(privacyInfoPath,
+          '<?xml version="1.0" encoding="UTF-8"?>\n' +
+          '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' +
+          '<plist version="1.0">\n<dict>\n' +
+          '\t<key>NSPrivacyAccessedAPITypes</key>\n\t<array/>\n' +
+          '\t<key>NSPrivacyCollectedDataTypes</key>\n\t<array/>\n' +
+          '\t<key>NSPrivacyTracking</key>\n\t<false/>\n' +
+          '\t<key>NSPrivacyTrackingDomains</key>\n\t<array/>\n' +
+          '</dict>\n</plist>\n'
+        );
+      }
+
       return cfg;
     },
   ]);
