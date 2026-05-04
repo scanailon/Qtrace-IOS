@@ -10,6 +10,8 @@ class MinewBleModule: RCTEventEmitter {
   private var connected: [String: MTPeripheralV3] = [:]
   private var connectorCache: [String: MTConnectionHandlerV3] = [:]
   private var proxyDelegate: MinewBleProxyDelegate?
+  private var cbCentralManager: CBCentralManager?
+  private var pendingScan = false
   private let secretKeys = ["minew123", "minewtech1234567", "3141592653589793"]
 
   override static func requiresMainQueueSetup() -> Bool { return true }
@@ -57,6 +59,7 @@ class MinewBleModule: RCTEventEmitter {
     proxy.originalDelegate = cbManager.delegate
     cbManager.delegate = proxy
     self.proxyDelegate = proxy
+    self.cbCentralManager = cbManager
     print("[BLE] Proxy delegate installed")
   }
 
@@ -70,29 +73,41 @@ class MinewBleModule: RCTEventEmitter {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       self.peripherals.removeAll()
+      self.pendingScan = true
 
       self.central?.didChangesBluetoothStatus { [weak self] state in
         guard let self = self else { return }
-        let status = state.rawValue == 2 ? "poweredOn" : "poweredOff"
-        self.sendEvent(withName: "onBleStatusChange", body: ["status": status])
+        let powered = state.rawValue == 2
+        self.sendEvent(withName: "onBleStatusChange", body: ["status": powered ? "poweredOn" : "poweredOff"])
+        if powered && self.pendingScan {
+          self.pendingScan = false
+          self.doStartScan()
+        }
       }
 
-      self.central?.startScan { [weak self] (devices: [MTPeripheralV3]?) in
-        guard let self = self, let devices = devices else { return }
-        var found: [[String: Any]] = []
-        for device in devices {
-          guard let mac = device.broadcast?.mac, !mac.isEmpty else { continue }
-          self.peripherals[mac] = device
-          found.append([
-            "mac": mac,
-            "name": device.broadcast?.name ?? "",
-            "rssi": device.broadcast?.rssi ?? 0,
-            "temp": device.broadcast?.temp ?? 0,
-            "battery": device.broadcast?.battery ?? 0,
-          ])
-        }
-        self.sendEvent(withName: "onDeviceFound", body: found)
+      if self.cbCentralManager?.state == .poweredOn {
+        self.pendingScan = false
+        self.doStartScan()
       }
+    }
+  }
+
+  private func doStartScan() {
+    central?.startScan { [weak self] (devices: [MTPeripheralV3]?) in
+      guard let self = self, let devices = devices else { return }
+      var found: [[String: Any]] = []
+      for device in devices {
+        guard let mac = device.broadcast?.mac, !mac.isEmpty else { continue }
+        self.peripherals[mac] = device
+        found.append([
+          "mac": mac,
+          "name": device.broadcast?.name ?? "",
+          "rssi": device.broadcast?.rssi ?? 0,
+          "temp": device.broadcast?.temp ?? 0,
+          "battery": device.broadcast?.battery ?? 0,
+        ])
+      }
+      self.sendEvent(withName: "onDeviceFound", body: found)
     }
   }
 
