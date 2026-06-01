@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { getTrackers, getCustomerAssets, getTripsHistory } from '../services/api
 export default function DashboardScreen({ onNavigate, onLogout, user }) {
   const [sensorCount, setSensorCount] = useState(0);
   const [tripCount, setTripCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const displayName = user?.name || 'Usuario';
 
@@ -23,6 +25,7 @@ export default function DashboardScreen({ onNavigate, onLogout, user }) {
   }, []);
 
   const fetchCounts = async () => {
+    setLoading(true);
     try {
       const customerId = user?.customerId;
       if (!customerId) return;
@@ -45,6 +48,8 @@ export default function DashboardScreen({ onNavigate, onLogout, user }) {
       setTripCount(trips.length);
     } catch (e) {
       console.error('Error cargando conteo:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,26 +84,33 @@ export default function DashboardScreen({ onNavigate, onLogout, user }) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, styles.statCardPrimary]}>
-            <View style={styles.statIconContainer}>
-              <Feather name="truck" size={24} color={COLORS.PRIMARY} />
+        {loading ? (
+          <View style={styles.statsLoading}>
+            <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+            <Text style={styles.statsLoadingText}>Cargando información...</Text>
+          </View>
+        ) : (
+          <View style={styles.statsContainer}>
+            <View style={[styles.statCard, styles.statCardPrimary]}>
+              <View style={styles.statIconContainer}>
+                <Feather name="truck" size={24} color={COLORS.PRIMARY} />
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{tripCount}</Text>
+                <Text style={styles.statLabel} numberOfLines={1}>Viajes</Text>
+              </View>
             </View>
-            <View style={styles.statContent}>
-              <Text style={styles.statNumber}>{tripCount}</Text>
-              <Text style={styles.statLabel} numberOfLines={1}>Viajes</Text>
+            <View style={[styles.statCard, styles.statCardSecondary]}>
+              <View style={[styles.statIconContainer, { backgroundColor: COLORS.SUCCESS + '15' }]}>
+                <Feather name="radio" size={24} color={COLORS.SUCCESS} />
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{sensorCount}</Text>
+                <Text style={styles.statLabel} numberOfLines={1}>Sensores</Text>
+              </View>
             </View>
           </View>
-          <View style={[styles.statCard, styles.statCardSecondary]}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.SUCCESS + '15' }]}>
-              <Feather name="radio" size={24} color={COLORS.SUCCESS} />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={styles.statNumber}>{sensorCount}</Text>
-              <Text style={styles.statLabel} numberOfLines={1}>Sensores</Text>
-            </View>
-          </View>
-        </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
@@ -232,6 +244,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 32,
     gap: 16,
+  },
+  statsLoading: {
+    marginBottom: 32,
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statsLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.GRAY_DARK,
+    fontWeight: '500',
   },
   statCard: {
     flex: 1,

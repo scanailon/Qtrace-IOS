@@ -42,7 +42,6 @@
           "cameraPermission": "Se necesita la cámara para escanear el código QR del sensor."
         }
       ],
-      "expo-sharing",
       "expo-font"
     ]
   }

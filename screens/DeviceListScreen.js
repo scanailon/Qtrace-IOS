@@ -15,23 +15,11 @@ import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { COLORS } from '../constants/colors';
-import { getTrackers, resolveDeviceByName } from '../services/apiService';
+import { getTrackers } from '../services/apiService';
 import { MinewBle } from '../services/MinewBle';
-
-const MOCK_UNREGISTERED_DEVICE = {
-  id: 'mock-unregistered',
-  name: 'C3000041CCC6',
-  nombre_sensor: 'Sensor no registrado (MOCK)',
-  type: 'tracker',
-  unidad: 'MOCK',
-  code: 'C3:00:00:41:CC:C6',
-  isUnregistered: true,
-  isMock: true,
-};
 
 export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDevice, setSelectedDevice] = useState(null);
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -83,7 +71,6 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
   );
 
   const handleSelectDevice = (device) => {
-    setSelectedDevice(device);
     if (onSelectDevice) onSelectDevice(device);
     if (onNavigate) onNavigate('report', { device });
   };
@@ -100,47 +87,37 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
 
     const foundSub = MinewBle.onDeviceFound((deviceList) => {
       console.log('[BLE] onDeviceFound fired, devices:', JSON.stringify(deviceList));
-      // Match by MAC first; fall back to strongest signal if MAC not found
-      let match = deviceList.find(
+      const match = deviceList.find(
         (d) => d.mac?.toUpperCase() === mac.toUpperCase()
       );
-      if (!match && deviceList.length > 0) {
-        // Fall back to device sharing most MAC prefix bytes with scanned MAC
-        const macBytes = mac.split(':');
-        match = deviceList.reduce((best, d) => {
-          const dBytes = (d.mac || '').split(':');
-          const score = macBytes.filter((b, i) => b === dBytes[i]).length;
-          const bestBytes = (best?.mac || '').split(':');
-          const bestScore = macBytes.filter((b, i) => b === bestBytes[i]).length;
-          return score > bestScore ? d : best;
-        }, null);
-        console.log('[BLE] MAC not found, best prefix match:', match?.mac);
-      }
       console.log('[BLE] Looking for MAC:', mac, '| match:', match ? 'YES' : 'NO');
       if (!match || connecting) return;
       connecting = true;
 
-      const bleMac = match.mac; // use actual BLE MAC, may differ from QR MAC
+      const bleMac = match.mac;
       activeMac = bleMac;
       setBleStatus('connecting');
       setBleMessage(`Conectando a ${bleMac}…`);
       MinewBle.connect(bleMac);
     });
 
-    let activeMac = mac; // updated to real BLE mac once found
+    let activeMac = mac;
     let connecting = false;
     const connSub = MinewBle.onConnStateChange(({ mac: m, state }) => {
       if (m?.toUpperCase() !== activeMac.toUpperCase()) return;
       if (state === 'ConnectComplete') {
         setBleStatus('connected');
         setBleMessage('Conectado');
+
+        const htModel = 2; // app is MST03-only
+
         // Find device in list or create stub for unregistered sensor
         const match = devices.find(
           (d) => (d.name || '').toUpperCase() === mac.replace(/:/g, '').toUpperCase()
             || (d.code || '').toUpperCase() === mac.toUpperCase()
         );
         const deviceObj = match
-          ? { ...match, bleConnected: true, bleMac: mac }
+          ? { ...match, bleConnected: true, bleMac: mac, htModel }
           : {
               id: mac,
               name: mac.replace(/:/g, ''),
@@ -148,7 +125,9 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
               isUnregistered: true,
               bleConnected: true,
               bleMac: mac,
+              htModel,
             };
+        console.log('[BLE] ConnectComplete — htModel:', htModel, 'mac:', mac);
         setBleStatus(null);
         handleSelectDevice(deviceObj);
       } else if (state === 'ValidateFailed' || state === 'DeviceNotFound') {
@@ -206,46 +185,17 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
 
   // ───────────────────────────────────────────────────────────────────────────
 
-  const handleSelectMockUnregistered = async () => {
-    try {
-      const resolved = await resolveDeviceByName('C3000041CCC6');
-      const mockDevice = {
-        ...MOCK_UNREGISTERED_DEVICE,
-        deviceId: resolved.deviceId,
-        deviceName: resolved.deviceName,
-        assetId: resolved.assetId,
-        assetName: resolved.assetName,
-      };
-      handleSelectDevice(mockDevice);
-    } catch (e) {
-      console.error('Error resolviendo mock:', e);
-      handleSelectDevice(MOCK_UNREGISTERED_DEVICE);
-    }
-  };
-
   const renderDeviceItem = ({ item }) => {
-    const isSelected = selectedDevice?.id === item.id;
     return (
-      <TouchableOpacity
-        style={[styles.deviceItem, isSelected && styles.deviceItemSelected]}
-        onPress={() => handleSelectDevice(item)}
-        activeOpacity={0.7}
-      >
+      <View style={styles.deviceItem}>
         <View style={styles.deviceContent}>
-          <View style={[styles.colorSection, isSelected && styles.colorSectionSelected]}>
-            <View style={[styles.deviceIconContainer, isSelected && styles.deviceIconContainerSelected]}>
-              <Feather
-                name="radio"
-                size={20}
-                color={isSelected ? COLORS.WHITE : COLORS.PRIMARY}
-              />
+          <View style={styles.colorSection}>
+            <View style={styles.deviceIconContainer}>
+              <Feather name="radio" size={20} color={COLORS.PRIMARY} />
             </View>
           </View>
           <View style={styles.deviceInfo}>
-            <Text
-              style={[styles.deviceName, isSelected && styles.deviceNameSelected]}
-              numberOfLines={1}
-            >
+            <Text style={styles.deviceName} numberOfLines={1}>
               {item.nombre_sensor || item.name}
             </Text>
             <Text style={styles.deviceCode}>{item.name}</Text>
@@ -253,15 +203,8 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
               <Text style={styles.deviceUnit}>{item.unidad}</Text>
             ) : null}
           </View>
-          <View style={styles.arrowContainer}>
-            <Feather
-              name="chevron-right"
-              size={18}
-              color={isSelected ? COLORS.PRIMARY : COLORS.GRAY_DARK}
-            />
-          </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -281,7 +224,7 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
               <Feather name="arrow-left" size={20} color={COLORS.WHITE} />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Seleccionar Sensor</Text>
+              <Text style={styles.headerTitle}>Escanear Sensor</Text>
               <Text style={styles.headerSubtitle}>
                 {loading
                   ? 'Cargando sensores...'
@@ -352,17 +295,6 @@ export default function DeviceListScreen({ onNavigate, onSelectDevice, user }) {
           </View>
         </View>
       </Modal>
-
-      <TouchableOpacity
-        style={styles.mockButton}
-        onPress={handleSelectMockUnregistered}
-        activeOpacity={0.8}
-      >
-        <Feather name="tool" size={16} color={COLORS.PRIMARY} />
-        <Text style={styles.mockButtonText}>
-          Probar sensor no registrado (MOCK C3:00:00:41:CC:C6)
-        </Text>
-      </TouchableOpacity>
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -479,26 +411,6 @@ const styles = StyleSheet.create({
   },
   searchIconLeft: {
     marginLeft: 0,
-  },
-  mockButton: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: COLORS.WHITE,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.PRIMARY + '40',
-    borderStyle: 'dashed',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  mockButtonText: {
-    color: COLORS.PRIMARY,
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
   },
   listContainer: {
     padding: 20,

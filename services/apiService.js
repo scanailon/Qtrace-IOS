@@ -114,6 +114,30 @@ export const getTripsHistory = async (assetId, startTs, endTs) => {
   return data;
 };
 
+/**
+ * Subir lecturas reales de temperatura como timeseries del dispositivo en ThingsBoard.
+ * Usado cuando el sensor escaneado SÍ está registrado en la lista.
+ *   POST /api/plugins/telemetry/DEVICE/{deviceId}/timeseries/ANY
+ * @param {string} deviceId  ID del dispositivo en ThingsBoard
+ * @param {Array<{ts:number, value:number}>} points  lecturas (ts en ms)
+ */
+export const sendDeviceTelemetry = async (deviceId, points) => {
+  const token = await (await import('./tokenService')).getToken();
+  const body = points.map((p) => ({
+    ts: p.ts,
+    values: { temperature: Number(p.value.toFixed(2)) },
+  }));
+  const { data } = await axios.post(
+    `${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${deviceId}/timeseries/ANY`,
+    body,
+    {
+      headers: { 'X-Authorization': `Bearer ${token}` },
+      timeout: 30000,
+    }
+  );
+  return data;
+};
+
 export const saveVehicleReport = async (activoTiendaId, reconstruirViajeJson, pdfUri) => {
   const client = createClient();
 

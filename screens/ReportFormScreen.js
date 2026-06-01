@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { LineChart } from 'react-native-chart-kit';
 import { COLORS } from '../constants/colors';
 import CustomDateTimePicker from '../components/DateTimePicker';
 import {
@@ -23,6 +25,7 @@ import {
   generateVehicleReport,
   saveVehicleReport,
   sendTelemetry,
+  sendDeviceTelemetry,
 } from '../services/apiService';
 import { getToken } from '../services/tokenService';
 import { MinewBle } from '../services/MinewBle';
@@ -124,6 +127,18 @@ function toIsoUtc(date) {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// Reduce los puntos a como máximo `max` para que el gráfico no se sature.
+function downsample(points, max = 40) {
+  if (points.length <= max) return points;
+  const step = points.length / max;
+  const out = [];
+  for (let i = 0; i < max; i++) out.push(points[Math.floor(i * step)]);
+  out.push(points[points.length - 1]);
+  return out;
+}
+
 export default function ReportFormScreen({ device, onNavigate, user }) {
   const [formData, setFormData] = useState({
     origin: '',
@@ -134,6 +149,10 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
     loadProfile: '',
   });
   const [generating, setGenerating] = useState(false);
+  const [querying, setQuerying] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewData, setPreviewData] = useState(null); // { points, tempInicio, tempFin, tempPromedio }
+  const [pendingShareUri, setPendingShareUri] = useState(null); // PDF a compartir tras cerrar el modal
   const [assetInfo, setAssetInfo] = useState(null);
 
   const liberadoPor = user?.name || 'S/I';
@@ -166,7 +185,8 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleSave = async () => {
+  // Paso 1: validar, consultar el sensor y abrir la vista previa.
+  const handlePreview = async () => {
     if (!formData.origin.trim()) return Alert.alert('Error', 'El origen es requerido');
     if (!formData.destination.trim()) return Alert.alert('Error', 'El destino es requerido');
     if (!formData.dispatchCode.trim()) return Alert.alert('Error', 'El código de despacho es requerido');
@@ -177,7 +197,6 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
 
     const resolvedDeviceId = device?.deviceId || sensorId;
     const resolvedAssetId = assetInfo?.id || device?.assetId;
-    const resolvedAssetName = assetInfo?.name || device?.assetName || 'S/I';
 
     if (!resolvedDeviceId || !resolvedAssetId) {
       return Alert.alert(
@@ -186,10 +205,10 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
       );
     }
 
-    setGenerating(true);
-
+    setQuerying(true);
     try {
-      // Para sensores conectados via BLE: leer historial real del sensor
+      let points = [];
+
       if (isBleConnected && bleMac && MinewBle.isSupported) {
         const startSec = Math.floor(formData.startDate.getTime() / 1000);
         const endSec = Math.floor(formData.endDate.getTime() / 1000);
@@ -202,72 +221,68 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
             clearTimeout(timeout);
             resolve(error ? [] : data);
           });
-          MinewBle.queryHistory(bleMac, startSec, endSec);
+          const htModel = device?.htModel ?? 1;
+          MinewBle.queryHistory(bleMac, startSec, endSec, htModel);
         });
 
-        if (blePoints.length > 0) {
-          const values = blePoints.map((p) => p.temperature);
-          const tempInicio = values[0];
-          const tempFin = values[values.length - 1];
-          const tempPromedio = parseFloat(
-            (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
-          );
-
-          const sincJson = JSON.stringify({
-            status: 'pendiente',
-            mac: bleMac,
-            origen: formData.origin || 'S/I',
-            destino: formData.destination || 'S/I',
-            perfil_carga: formData.loadProfile || 'S/I',
-            codigo_despacho: formData.dispatchCode || 'S/I',
-            liberado_por: liberadoPor,
-            fecha_inicio: toIsoUtc(formData.startDate),
-            fecha_termino: toIsoUtc(formData.endDate),
-            temperatura_inicio: tempInicio,
-            temperatura_fin: tempFin,
-            temperatura_promedio: tempPromedio,
-            temperaturas: blePoints.map((p) => ({
-              ts: p.timestamp * 1000,
-              value: p.temperature,
-            })),
-          });
-
-          const token = await getToken();
-          await sendTelemetry({
-            token,
-            baseUrl: 'https://engine.unklatam.com:443',
-            entityType: 'DEVICE',
-            entityId: resolvedDeviceId,
-            scope: 'ts',
-            telemetryData: [{ ts: Date.now(), values: { sincronizaciones: sincJson } }],
-          });
-        }
-
-        // Disconnect sensor after reading
-        MinewBle.disconnect(bleMac);
-
-      } else if (isUnregistered) {
-        // Fallback: mock telemetry for unregistered sensors without BLE
+        points = blePoints.map((p) => ({ ts: p.timestamp * 1000, value: p.temperature }));
+      } else {
+        // Fallback (sensor sin BLE): genera una curva simulada solo para la vista previa.
         const startTs = formData.startDate.getTime();
         const endTs = formData.endDate.getTime();
         const interval = (endTs - startTs) / 20;
-
-        const mockPoints = Array.from({ length: 21 }, (_, i) => ({
+        points = Array.from({ length: 21 }, (_, i) => ({
           ts: startTs + interval * i,
           value: parseFloat((3.0 + Math.sin(i * 0.5) * 2.5).toFixed(1)),
         }));
+      }
 
-        const values = mockPoints.map((p) => p.value);
-        const tempInicio = values[0] || 0;
-        const tempFin = values[values.length - 1] || 0;
-        const tempPromedio =
-          values.length > 0
-            ? parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1))
-            : 0;
+      if (points.length === 0) {
+        setQuerying(false);
+        return Alert.alert(
+          'Sin datos',
+          'No se pudieron leer lecturas del sensor en el rango seleccionado. Verifique las fechas y que el sensor esté encendido.'
+        );
+      }
 
+      const values = points.map((p) => p.value);
+      const tempInicio = values[0];
+      const tempFin = values[values.length - 1];
+      const tempPromedio = parseFloat(
+        (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
+      );
+
+      setPreviewData({ points, tempInicio, tempFin, tempPromedio });
+      setQuerying(false);
+      setPreviewVisible(true);
+    } catch (e) {
+      setQuerying(false);
+      console.error('Error consultando sensor:', e);
+      Alert.alert('Error', 'No se pudo consultar el historial del sensor.');
+    }
+  };
+
+  // Paso 2: confirmar en la vista previa → subir telemetría y generar el reporte.
+  const handleConfirmGenerate = async () => {
+    if (!previewData) return;
+
+    const resolvedDeviceId = device?.deviceId || sensorId;
+    const resolvedAssetId = assetInfo?.id || device?.assetId;
+    const resolvedAssetName = assetInfo?.name || device?.assetName || 'S/I';
+
+    const { points, tempInicio, tempFin, tempPromedio } = previewData;
+
+    setGenerating(true);
+
+    try {
+      if (!isUnregistered) {
+        // Sensor registrado: subir lecturas reales directo a ThingsBoard.
+        await sendDeviceTelemetry(resolvedDeviceId, points);
+      } else {
+        // Sensor no registrado: mantener el flujo de "sincronizaciones".
         const sincJson = JSON.stringify({
           status: 'pendiente',
-          mac: sensorName || resolvedDeviceId,
+          mac: bleMac || sensorName || resolvedDeviceId,
           origen: formData.origin || 'S/I',
           destino: formData.destination || 'S/I',
           perfil_carga: formData.loadProfile || 'S/I',
@@ -278,7 +293,7 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
           temperatura_inicio: tempInicio,
           temperatura_fin: tempFin,
           temperatura_promedio: tempPromedio,
-          temperaturas: mockPoints.map((p) => ({ ts: p.ts, value: p.value })),
+          temperaturas: points,
         });
 
         const token = await getToken();
@@ -308,7 +323,7 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
           fecha_termino: toIsoUtc(formData.endDate),
           origen_ruta: formData.origin,
           destino_ruta: formData.destination,
-          fuente_telemetria: (isBleConnected || isUnregistered) ? 'sincronizaciones' : null,
+          fuente_telemetria: isUnregistered ? 'sincronizaciones' : null,
         },
       };
 
@@ -354,19 +369,13 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
         console.warn('Error guardando reporte (no crítico):', saveErr);
       }
 
+      // Reporte generado: desconectar el sensor y cerrar la vista previa.
+      // El compartir / alerta se dispara en onDismiss del modal, porque iOS no
+      // permite presentar el share sheet mientras el modal aún se está cerrando.
+      if (isBleConnected && bleMac) MinewBle.disconnect(bleMac);
       setGenerating(false);
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Reporte de viaje',
-        });
-      }
-
-      Alert.alert('Reporte generado', 'El reporte PDF se generó correctamente.', [
-        { text: 'OK', onPress: () => onNavigate('dashboard') },
-      ]);
+      setPendingShareUri(fileUri);
+      setPreviewVisible(false);
     } catch (e) {
       setGenerating(false);
       console.error('Error generando reporte:', e);
@@ -382,6 +391,30 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
 
       Alert.alert('Error al generar reporte', msg);
     }
+  };
+
+  // Se ejecuta cuando el modal terminó de cerrarse. Recién aquí es seguro
+  // presentar el share sheet y la alerta de éxito en iOS.
+  const handlePreviewDismissed = async () => {
+    const uri = pendingShareUri;
+    if (!uri) return;
+    setPendingShareUri(null);
+
+    try {
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Reporte de viaje',
+        });
+      }
+    } catch (e) {
+      console.warn('Error compartiendo PDF:', e);
+    }
+
+    Alert.alert('Reporte generado', 'El reporte PDF se generó correctamente.', [
+      { text: 'OK', onPress: () => onNavigate('dashboard') },
+    ]);
   };
 
   return (
@@ -479,21 +512,114 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
         />
 
         <TouchableOpacity
-          style={[styles.saveButton, generating && styles.saveButtonDisabled]}
-          onPress={handleSave}
+          style={[styles.saveButton, querying && styles.saveButtonDisabled]}
+          onPress={handlePreview}
           activeOpacity={0.8}
-          disabled={generating}
+          disabled={querying}
         >
-          {generating ? (
+          {querying ? (
             <View style={styles.savingRow}>
               <ActivityIndicator color={COLORS.WHITE} size="small" />
-              <Text style={styles.saveButtonText}>Generando reporte...</Text>
+              <Text style={styles.saveButtonText}>Consultando sensor...</Text>
             </View>
           ) : (
-            <Text style={styles.saveButtonText}>Generar Reporte</Text>
+            <Text style={styles.saveButtonText}>Consultar sensor</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Vista previa de la temperatura consultada */}
+      <Modal
+        visible={previewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !generating && setPreviewVisible(false)}
+        onDismiss={handlePreviewDismissed}
+      >
+        <View style={styles.previewBackdrop}>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>Vista previa del viaje</Text>
+              {!generating && (
+                <TouchableOpacity onPress={() => setPreviewVisible(false)}>
+                  <Feather name="x" size={22} color={COLORS.GRAY_DARK} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {previewData && (
+                <>
+                  <LineChart
+                    data={{
+                      labels: [],
+                      datasets: [{ data: downsample(previewData.points).map((p) => p.value) }],
+                    }}
+                    width={SCREEN_WIDTH - 72}
+                    height={200}
+                    yAxisSuffix="°"
+                    chartConfig={{
+                      backgroundGradientFrom: COLORS.WHITE,
+                      backgroundGradientTo: COLORS.WHITE,
+                      decimalPlaces: 1,
+                      color: (o = 1) => `rgba(0, 122, 255, ${o})`,
+                      labelColor: () => COLORS.GRAY_DARK,
+                      propsForDots: { r: '0' },
+                    }}
+                    bezier
+                    style={styles.previewChart}
+                  />
+
+                  <View style={styles.tempRow}>
+                    <View style={styles.tempCard}>
+                      <Text style={styles.tempLabel}>Inicio</Text>
+                      <Text style={styles.tempValue}>{previewData.tempInicio.toFixed(1)}°C</Text>
+                    </View>
+                    <View style={styles.tempCard}>
+                      <Text style={styles.tempLabel}>Fin</Text>
+                      <Text style={styles.tempValue}>{previewData.tempFin.toFixed(1)}°C</Text>
+                    </View>
+                    <View style={styles.tempCard}>
+                      <Text style={styles.tempLabel}>Promedio</Text>
+                      <Text style={styles.tempValue}>{previewData.tempPromedio.toFixed(1)}°C</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.previewHint}>
+                    {previewData.points.length} lecturas en el rango seleccionado
+                  </Text>
+                </>
+              )}
+            </ScrollView>
+
+            <View style={styles.previewActions}>
+              <TouchableOpacity
+                style={[styles.previewBtn, styles.previewBtnCancel]}
+                onPress={() => setPreviewVisible(false)}
+                disabled={generating}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.previewBtnCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.previewBtn, styles.previewBtnConfirm, generating && styles.saveButtonDisabled]}
+                onPress={handleConfirmGenerate}
+                disabled={generating}
+                activeOpacity={0.8}
+              >
+                {generating ? (
+                  <View style={styles.savingRow}>
+                    <ActivityIndicator color={COLORS.WHITE} size="small" />
+                    <Text style={styles.previewBtnConfirmText}>Generando...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.previewBtnConfirmText}>Generar reporte</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -717,5 +843,93 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  previewCard: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: '85%',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.BLACK,
+  },
+  previewChart: {
+    borderRadius: 12,
+    marginVertical: 8,
+    alignSelf: 'center',
+  },
+  tempRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
+  },
+  tempCard: {
+    flex: 1,
+    backgroundColor: COLORS.PRIMARY + '10',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  tempLabel: {
+    fontSize: 12,
+    color: COLORS.GRAY_DARK,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  tempValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.PRIMARY,
+  },
+  previewHint: {
+    fontSize: 12,
+    color: COLORS.GRAY_DARK,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  previewBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewBtnCancel: {
+    backgroundColor: COLORS.WHITE,
+    borderWidth: 1,
+    borderColor: COLORS.GRAY_DARK + '40',
+  },
+  previewBtnCancelText: {
+    color: COLORS.GRAY_DARK,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  previewBtnConfirm: {
+    backgroundColor: COLORS.PRIMARY,
+  },
+  previewBtnConfirmText: {
+    color: COLORS.WHITE,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

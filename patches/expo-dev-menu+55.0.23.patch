@@ -1,0 +1,198 @@
+diff --git a/node_modules/expo-dev-menu/CHANGELOG.md b/node_modules/expo-dev-menu/CHANGELOG.md
+index d118e9e..a1b8571 100644
+--- a/node_modules/expo-dev-menu/CHANGELOG.md
++++ b/node_modules/expo-dev-menu/CHANGELOG.md
+@@ -10,22 +10,6 @@
+ 
+ ### 💡 Others
+ 
+-## 55.0.26 — 2026-05-01
+-
+-_This version does not introduce any user-facing changes._
+-
+-## 55.0.25 — 2026-05-01
+-
+-### 🎉 New features
+-
+-- [plugin] Add option to disable tools button by default. ([#44251](https://github.com/expo/expo/pull/44251) by [@alanjhughes](https://github.com/alanjhughes))
+-
+-## 55.0.24 — 2026-04-21
+-
+-### 🐛 Bug fixes
+-
+-- [iOS] Remove `#Preview` SwiftUI blocks that cause build failures when consuming the package as a dependency. ([#44775](https://github.com/expo/expo/pull/44775) by [@fabriziocucci](https://github.com/fabriziocucci))
+-
+ ## 55.0.23 — 2026-04-11
+ 
+ _This version does not introduce any user-facing changes._
+diff --git a/node_modules/expo-dev-menu/android/build.gradle b/node_modules/expo-dev-menu/android/build.gradle
+index 8a0dbf2..2804e25 100644
+--- a/node_modules/expo-dev-menu/android/build.gradle
++++ b/node_modules/expo-dev-menu/android/build.gradle
+@@ -12,7 +12,7 @@ apply plugin: 'expo-module-gradle-plugin'
+ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+ 
+ group = 'host.exp.exponent'
+-version = '55.0.26'
++version = '55.0.23'
+ 
+ def hasDevLauncher = findProject(":expo-dev-launcher") != null
+ def configureInRelease = findProperty("expo.devmenu.configureInRelease") == "true"
+@@ -29,7 +29,7 @@ android {
+ 
+   defaultConfig {
+     versionCode 10
+-    versionName '55.0.26'
++    versionName '55.0.23'
+   }
+ 
+   buildTypes {
+diff --git a/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/DevMenuPreferences.kt b/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/DevMenuPreferences.kt
+index e3451d5..60d62a6 100644
+--- a/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/DevMenuPreferences.kt
++++ b/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/DevMenuPreferences.kt
+@@ -3,7 +3,6 @@ package expo.modules.devmenu
+ import android.app.Application
+ import android.content.Context.MODE_PRIVATE
+ import android.content.SharedPreferences
+-import android.content.pm.PackageManager
+ import expo.modules.devmenu.helpers.preferences
+ 
+ private const val DEV_SETTINGS_PREFERENCES = "expo.modules.devmenu.sharedpreferences"
+@@ -55,15 +54,6 @@ class DevMenuDefaultPreferences(
+ ) : DevMenuPreferences {
+   private val sharedPreferences = application.getSharedPreferences(DEV_SETTINGS_PREFERENCES, MODE_PRIVATE)
+ 
+-  private val fabDefault: Boolean = try {
+-    val ai = application.packageManager.getApplicationInfo(
+-      application.packageName, PackageManager.GET_META_DATA
+-    )
+-    ai.metaData?.getBoolean("EXDevMenuShowFloatingActionButton", true) ?: true
+-  } catch (_: Exception) {
+-    true
+-  }
+-
+   private val listeners = mutableListOf<() -> Unit>()
+ 
+   // The preference manager does not currently store a strong reference to the listener.
+@@ -99,5 +89,5 @@ class DevMenuDefaultPreferences(
+     by preferences(sharedPreferences, false)
+ 
+   override var showFab: Boolean
+-    by preferences(sharedPreferences, fabDefault)
++    by preferences(sharedPreferences, true)
+ }
+diff --git a/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/websockets/DevMenuMetroClient.kt b/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/websockets/DevMenuMetroClient.kt
+index ad4517e..11a1966 100644
+--- a/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/websockets/DevMenuMetroClient.kt
++++ b/node_modules/expo-dev-menu/android/src/debug/java/expo/modules/devmenu/websockets/DevMenuMetroClient.kt
+@@ -1,13 +1,13 @@
+ package expo.modules.devmenu.websockets
+ 
+ import androidx.core.net.toUri
+-import com.facebook.react.modules.network.OkHttpClientProvider
+ import expo.modules.devmenu.helpers.await
++import okhttp3.OkHttpClient
+ import okhttp3.Request
+ import okhttp3.RequestBody.Companion.toRequestBody
+ 
+ object DevMenuMetroClient {
+-  private val httpClient = OkHttpClientProvider.getOkHttpClient()
++  private val httpClient by lazy { OkHttpClient() }
+ 
+   suspend fun openJSInspector(metroHost: String, applicationId: String) {
+     val url = "$metroHost/_expo/debugger".toUri()
+diff --git a/node_modules/expo-dev-menu/ios/DevMenuDevOptionsDelegate.swift b/node_modules/expo-dev-menu/ios/DevMenuDevOptionsDelegate.swift
+index 6271fad..9ac8ab7 100644
+--- a/node_modules/expo-dev-menu/ios/DevMenuDevOptionsDelegate.swift
++++ b/node_modules/expo-dev-menu/ios/DevMenuDevOptionsDelegate.swift
+@@ -25,8 +25,7 @@ class DevMenuDevOptionsDelegate {
+     // No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.
+     DevMenuManager.shared.hideMenu()
+ 
+-    let emc = self.bridge?.moduleRegistry.module(forName: "ExpoModulesCore") as? ExpoBridgeModule
+-    emc?.appContext?.reloadAppAsync()
++    self.bridge?.reload()
+   }
+ 
+   internal func toggleElementInsector() {
+diff --git a/node_modules/expo-dev-menu/ios/Modules/DevMenuPreferences.swift b/node_modules/expo-dev-menu/ios/Modules/DevMenuPreferences.swift
+index 7d5817d..393672c 100644
+--- a/node_modules/expo-dev-menu/ios/Modules/DevMenuPreferences.swift
++++ b/node_modules/expo-dev-menu/ios/Modules/DevMenuPreferences.swift
+@@ -26,8 +26,6 @@ public class DevMenuPreferences: Module {
+    and applying some preferences to static classes like interceptors.
+    */
+   static func setup() {
+-    let fabDefault = Bundle.main.object(forInfoDictionaryKey: showFloatingActionButtonKey) as? Bool
+-
+     #if os(tvOS)
+     UserDefaults.standard.register(defaults: [
+       motionGestureEnabledKey: false,
+@@ -35,7 +33,7 @@ public class DevMenuPreferences: Module {
+       keyCommandsEnabledKey: true,
+       showsAtLaunchKey: false,
+       isOnboardingFinishedKey: true,
+-      showFloatingActionButtonKey: fabDefault ?? false
++      showFloatingActionButtonKey: false
+     ])
+     #else
+     UserDefaults.standard.register(defaults: [
+@@ -44,7 +42,7 @@ public class DevMenuPreferences: Module {
+       keyCommandsEnabledKey: true,
+       showsAtLaunchKey: false,
+       isOnboardingFinishedKey: false,
+-      showFloatingActionButtonKey: fabDefault ?? true
++      showFloatingActionButtonKey: true
+     ])
+     #endif
+ 
+diff --git a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuButtons.swift b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuButtons.swift
+index 6d4ada6..6c626b7 100644
+--- a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuButtons.swift
++++ b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuButtons.swift
+@@ -75,3 +75,7 @@ struct DevMenuToggleButton: View {
+     .opacity(disabled ? 0.6 : 1.0)
+   }
+ }
++
++#Preview {
++  DevMenuActionButton(title: "Action", icon: "person.fast") {}
++}
+diff --git a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuDeveloperTools.swift b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuDeveloperTools.swift
+index 29ad12b..144e30e 100644
+--- a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuDeveloperTools.swift
++++ b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuDeveloperTools.swift
+@@ -91,4 +91,8 @@ struct DevMenuDeveloperTools: View {
+   }
+ }
+ 
++#Preview {
++  DevMenuDeveloperTools()
++}
++
+ // swiftlint:enable closure_body_length
+diff --git a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRNDevMenu.swift b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRNDevMenu.swift
+index 8793409..0c24e7e 100644
+--- a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRNDevMenu.swift
++++ b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRNDevMenu.swift
+@@ -16,3 +16,7 @@ struct DevMenuRNDevMenu: View {
+     .cornerRadius(18)
+   }
+ }
++
++#Preview {
++  DevMenuRNDevMenu {}
++}
+diff --git a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRootView.swift b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRootView.swift
+index e7c0502..7b57b05 100644
+--- a/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRootView.swift
++++ b/node_modules/expo-dev-menu/ios/SwiftUI/DevMenuRootView.swift
+@@ -45,3 +45,7 @@ struct DevMenuRootView: View {
+ #endif
+   }
+ }
++
++#Preview {
++  DevMenuRootView()
++}
