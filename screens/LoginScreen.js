@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { login } from '../services/authService';
@@ -116,7 +117,11 @@ export default function LoginScreen({ onLoginSuccess }) {
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <Text style={styles.headerText}>Q Trace UNK</Text>
+        <Image
+          source={require('../assets/qtrace.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.content}>
@@ -203,10 +208,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerText: {
-    color: COLORS.WHITE,
-    fontSize: 24,
-    fontWeight: 'bold',
+  headerLogo: {
+    width: 160,
+    height: 50,
   },
   content: {
     flex: 1,

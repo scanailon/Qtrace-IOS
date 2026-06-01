@@ -1,22 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, Animated } from 'react-native';
+import { View, StyleSheet, Image, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import LocationIcon from '../components/LocationIcon';
 
 export default function LoadingScreen({ onComplete }) {
-  // Animaciones
   const iconScale = useRef(new Animated.Value(0)).current;
   const iconOpacity = useRef(new Animated.Value(0)).current;
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(20)).current;
-  const unkOpacity = useRef(new Animated.Value(0)).current;
-  const unkTranslateY = useRef(new Animated.Value(20)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    // Secuencia de animaciones
     Animated.sequence([
-      // Animación del ícono (aparece con escala y fade)
+      // Ícono de ubicación (escala + fade)
       Animated.parallel([
         Animated.spring(iconScale, {
           toValue: 1,
@@ -30,87 +26,47 @@ export default function LoadingScreen({ onComplete }) {
           useNativeDriver: true,
         }),
       ]),
-      // Animación del título "Q Trace"
+      // Logo (fade + slide up)
       Animated.parallel([
-        Animated.timing(titleOpacity, {
+        Animated.timing(logoOpacity, {
           toValue: 1,
           duration: 500,
           useNativeDriver: true,
         }),
-        Animated.timing(titleTranslateY, {
+        Animated.timing(logoTranslateY, {
           toValue: 0,
           duration: 500,
           useNativeDriver: true,
         }),
       ]),
-      // Animación de "UNK"
-      Animated.parallel([
-        Animated.timing(unkOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(unkTranslateY, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Esperar un momento antes de redirigir
       Animated.delay(1000),
     ]).start();
 
-    // Redirigir después de todas las animaciones (aproximadamente 3 segundos)
     const timer = setTimeout(() => {
-      if (onComplete) {
-        onComplete();
-      }
+      if (onComplete) onComplete();
     }, 3200);
 
     return () => clearTimeout(timer);
-  }, [onComplete, iconScale, iconOpacity, titleOpacity, titleTranslateY, unkOpacity, unkTranslateY]);
+  }, [onComplete, iconScale, iconOpacity, logoOpacity, logoTranslateY]);
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
-      {/* Ícono animado */}
+
       <Animated.View
-        style={[
-          styles.iconContainer,
-          {
-            opacity: iconOpacity,
-            transform: [{ scale: iconScale }],
-          },
-        ]}
+        style={[styles.iconContainer, { opacity: iconOpacity, transform: [{ scale: iconScale }] }]}
       >
         <LocationIcon size={100} color={COLORS.WHITE} />
       </Animated.View>
 
-      {/* Título "Q Trace" animado */}
       <Animated.View
-        style={[
-          styles.titleContainer,
-          {
-            opacity: titleOpacity,
-            transform: [{ translateY: titleTranslateY }],
-          },
-        ]}
+        style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ translateY: logoTranslateY }] }]}
       >
-        <Text style={styles.title}>Q Trace</Text>
-      </Animated.View>
-
-      {/* "UNK" animado */}
-      <Animated.View
-        style={[
-          styles.unkContainer,
-          {
-            opacity: unkOpacity,
-            transform: [{ translateY: unkTranslateY }],
-          },
-        ]}
-      >
-        <Text style={styles.unk}>UNK</Text>
+        <Image
+          source={require('../assets/qtrace_start.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </Animated.View>
     </View>
   );
@@ -127,23 +83,11 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 40,
   },
-  titleContainer: {
-    marginBottom: 20,
+  logoContainer: {
+    marginTop: 8,
   },
-  title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: COLORS.WHITE,
-    letterSpacing: 2,
-  },
-  unkContainer: {
-    marginTop: 10,
-  },
-  unk: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: COLORS.WHITE,
-    letterSpacing: 4,
+  logoImage: {
+    width: 200,
+    height: 70,
   },
 });
-

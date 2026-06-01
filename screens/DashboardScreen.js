@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -65,7 +66,11 @@ export default function DashboardScreen({ onNavigate, onLogout, user }) {
               <Text style={styles.headerGreeting}>
                 Bienvenido <Text style={styles.headerUserName}>{displayName}</Text>
               </Text>
-              <Text style={styles.headerTitle}>Q Trace UNK</Text>
+              <Image
+                source={require('../assets/qtrace.png')}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
             </View>
             <TouchableOpacity
               style={styles.logoutButton}
@@ -210,11 +215,10 @@ const styles = StyleSheet.create({
   headerUserName: {
     fontWeight: '700',
   },
-  headerTitle: {
-    color: COLORS.WHITE,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  headerLogo: {
+    width: 140,
+    height: 44,
+    marginTop: 4,
   },
   headerSubtitle: {
     color: COLORS.WHITE,
