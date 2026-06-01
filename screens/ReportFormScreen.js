@@ -139,6 +139,45 @@ function downsample(points, max = 40) {
   return out;
 }
 
+function getThreshold(loadProfile) {
+  switch (loadProfile) {
+    case 'Refrigerado':          return 5;
+    case 'Congelado':            return -18;
+    case 'Refrigerado al vacío': return 2;
+    default:                     return null;
+  }
+}
+
+// points: [{timestamp (segundos), temperature}]
+function detectAlerts(points, limit) {
+  if (limit === null || points.length === 0) return [];
+  const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);
+  const alerts = [];
+  let start = null;
+  let max = -Infinity;
+  const endTs = sorted[sorted.length - 1].timestamp;
+  for (const p of sorted) {
+    const temp = p.temperature;
+    if (temp > limit) {
+      if (start === null) start = p.timestamp;
+      if (temp > max) max = temp;
+    } else if (start !== null) {
+      alerts.push({ maxTemp: max, startTime: start, endTime: p.timestamp });
+      start = null; max = -Infinity;
+    }
+  }
+  if (start !== null) alerts.push({ maxTemp: max, startTime: start, endTime: endTs });
+  return alerts;
+}
+
+function formatAlert({ maxTemp, startTime, endTime }) {
+  const fmt = (ts) => {
+    const d = new Date(ts * 1000);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  return `${maxTemp.toFixed(1)}°C | ${fmt(startTime)} | ${fmt(endTime)}`;
+}
+
 export default function ReportFormScreen({ device, onNavigate, user }) {
   const [formData, setFormData] = useState({
     origin: '',
@@ -252,7 +291,14 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
         (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)
       );
 
-      setPreviewData({ points, tempInicio, tempFin, tempPromedio });
+      const viajesAlerts = (isBleConnected && bleMac && MinewBle.isSupported)
+        ? detectAlerts(
+            points.map((p) => ({ timestamp: p.ts / 1000, temperature: p.value })),
+            getThreshold(formData.loadProfile)
+          ).map(formatAlert)
+        : [];
+
+      setPreviewData({ points, tempInicio, tempFin, tempPromedio, viajesAlerts });
       setQuerying(false);
       setPreviewVisible(true);
     } catch (e) {
@@ -270,7 +316,7 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
     const resolvedAssetId = assetInfo?.id || device?.assetId;
     const resolvedAssetName = assetInfo?.name || device?.assetName || 'S/I';
 
-    const { points, tempInicio, tempFin, tempPromedio } = previewData;
+    const { points, tempInicio, tempFin, tempPromedio, viajesAlerts } = previewData;
 
     setGenerating(true);
 
@@ -362,6 +408,7 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
           temperatura_inicio: temps.temperatura_inicio || 0,
           temperatura_fin: temps.temperatura_fin || 0,
           temperatura_promedio: temps.temperatura_promedio || 0,
+          viajesAlerts,
         });
 
         await saveVehicleReport(resolvedAssetId, saveBody, fileUri);
@@ -588,6 +635,30 @@ export default function ReportFormScreen({ device, onNavigate, user }) {
                   <Text style={styles.previewHint}>
                     {previewData.points.length} lecturas en el rango seleccionado
                   </Text>
+
+                  {previewData.viajesAlerts?.length > 0 ? (
+                    <View style={styles.alertsSection}>
+                      <View style={styles.alertsHeader}>
+                        <Feather name="alert-triangle" size={16} color="#FF3B30" />
+                        <Text style={styles.alertsTitle}>
+                          {previewData.viajesAlerts.length} alerta{previewData.viajesAlerts.length > 1 ? 's' : ''} detectada{previewData.viajesAlerts.length > 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      {previewData.viajesAlerts.map((a, i) => (
+                        <View key={i} style={styles.alertItem}>
+                          <Feather name="thermometer" size={13} color="#FF3B30" />
+                          <Text style={styles.alertItemText}>{a}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.alertsSection}>
+                      <View style={styles.alertsHeader}>
+                        <Feather name="check-circle" size={16} color="#34C759" />
+                        <Text style={[styles.alertsTitle, { color: '#34C759' }]}>Sin alertas</Text>
+                      </View>
+                    </View>
+                  )}
                 </>
               )}
             </ScrollView>
@@ -931,5 +1002,35 @@ const styles = StyleSheet.create({
     color: COLORS.WHITE,
     fontSize: 16,
     fontWeight: '700',
+  },
+  alertsSection: {
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1,
+    borderColor: '#FFD0CC',
+  },
+  alertsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  alertsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF3B30',
+  },
+  alertItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  alertItemText: {
+    fontSize: 13,
+    color: '#CC2200',
+    flex: 1,
   },
 });
