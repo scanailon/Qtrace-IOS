@@ -9,10 +9,8 @@ const { execSync } = require('child_process');
 const FRAMEWORK_SRC = path.join(
   __dirname,
   '..',
-  'sdkMinew',
-  'MinewSensorKitForV3',
-  'MTSensorV3KitDemo',
-  'MTSensorV3Kit.framework'
+  'ios_native',
+  'MTIndustrialSensorKit.framework'
 );
 
 const NATIVE_SRC = path.join(__dirname, '..', 'ios_native');
@@ -46,8 +44,8 @@ const withMinewFiles = (config) => {
       const iosDir = cfg.modRequest.platformProjectRoot;
       const projectName = cfg.modRequest.projectName;
 
-      // Copy MTSensorV3Kit.framework -> ios/Frameworks/MTSensorV3Kit.framework
-      const frameworkDest = path.join(iosDir, 'Frameworks', 'MTSensorV3Kit.framework');
+      // Copy MTIndustrialSensorKit.framework -> ios/Frameworks/MTIndustrialSensorKit.framework
+      const frameworkDest = path.join(iosDir, 'Frameworks', 'MTIndustrialSensorKit.framework');
       copyDir(FRAMEWORK_SRC, frameworkDest);
 
       // Convert binary plists inside the framework to XML so CocoaPods can read them
@@ -63,7 +61,7 @@ const withMinewFiles = (config) => {
       const bridgingHeaderPath = path.join(targetDir, `${projectName}-Bridging-Header.h`);
       fs.writeFileSync(
         bridgingHeaderPath,
-        '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTSensorV3Kit/MTSensorV3Kit.h>\n#import "MinewBleProxyDelegate.h"\n'
+        '#import <React/RCTBridgeModule.h>\n#import <React/RCTEventEmitter.h>\n#import <MTIndustrialSensorKit/MTIndustrialSensorKit.h>\n#import "MinewBleProxyDelegate.h"\n'
       );
 
       // Ensure PrivacyInfo.xcprivacy exists so react_native_post_install can aggregate into it
@@ -92,13 +90,13 @@ const withMinewXcode = (config) => {
     const xcodeProject = cfg.modResults;
     const projectName = cfg.modRequest.projectName;
 
-    const frameworkRelativePath = 'Frameworks/MTSensorV3Kit.framework';
+    const frameworkRelativePath = 'Frameworks/MTIndustrialSensorKit.framework';
 
     // --- Add framework to project ---
     // Check if already added
     const existingFramework = xcodeProject.pbxFileReferenceSection
       ? Object.values(xcodeProject.pbxFileReferenceSection()).find(
-          (ref) => ref && ref.path && ref.path.includes('MTSensorV3Kit.framework')
+          (ref) => ref && ref.path && ref.path.includes('MTIndustrialSensorKit.framework')
         )
       : null;
 

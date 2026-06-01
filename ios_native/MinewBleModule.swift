@@ -5,27 +5,27 @@ import CoreBluetooth
 @objc(MinewBleModule)
 class MinewBleModule: RCTEventEmitter {
 
-  private let central = MTCentralManagerV3.sharedInstance()
-  private var peripherals: [String: MTPeripheralV3] = [:]
-  private var connected: [String: MTPeripheralV3] = [:]
-  private var connectorCache: [String: MTConnectionHandlerV3] = [:]
+  private let central = MTICentralManager.sharedInstance()
+  private var peripherals: [String: MTIPeripheral] = [:]
+  private var connected: [String: MTIPeripheral] = [:]
+  private var connectorCache: [String: MTIConnectionHandler] = [:]
   private var proxyDelegate: MinewBleProxyDelegate?
   private var cbCentralManager: CBCentralManager?
   private var pendingScan = false
+  private var retryingMacs: Set<String> = []
   private let secretKeys = ["minew123", "minewtech1234567", "3141592653589793"]
 
   override static func requiresMainQueueSetup() -> Bool { return true }
 
   override init() {
     super.init()
-    // requiresMainQueueSetup = true guarantees we're on the main thread here.
     installProxyDelegate()
   }
 
   // MARK: - Proxy delegate setup
 
   /// Uses the ObjC runtime to find the CBCentralManager ivar inside
-  /// MTCentralManagerV3 and inserts our proxy as its delegate.
+  /// MTICentralManager and inserts our proxy as its delegate.
   /// The proxy sets CBPeripheral.delegate BEFORE the SDK's
   /// centralManager:didConnectPeripheral: runs, fixing the SDK bug.
   private func installProxyDelegate() {
@@ -51,7 +51,7 @@ class MinewBleModule: RCTEventEmitter {
     }
 
     guard let cbManager = cbManager else {
-      print("[BLE] Proxy: CBCentralManager ivar not found in MTCentralManagerV3")
+      print("[BLE] Proxy: CBCentralManager ivar not found in MTICentralManager")
       return
     }
 
@@ -77,7 +77,7 @@ class MinewBleModule: RCTEventEmitter {
 
       self.central?.didChangesBluetoothStatus { [weak self] state in
         guard let self = self else { return }
-        let powered = state.rawValue == 2
+        let powered = state.rawValue == 2  // PowerStatePoweredOn
         self.sendEvent(withName: "onBleStatusChange", body: ["status": powered ? "poweredOn" : "poweredOff"])
         if powered && self.pendingScan {
           self.pendingScan = false
@@ -93,18 +93,30 @@ class MinewBleModule: RCTEventEmitter {
   }
 
   private func doStartScan() {
-    central?.startScan { [weak self] (devices: [MTPeripheralV3]?) in
+    central?.startScan { [weak self] (devices: [MTIPeripheral]?) in
       guard let self = self, let devices = devices else { return }
       var found: [[String: Any]] = []
       for device in devices {
-        guard let mac = device.broadcast?.mac, !mac.isEmpty else { continue }
+        guard let fh = device.frameHandler else { continue }
+        guard let mac = fh.mac, !mac.isEmpty else { continue }
         self.peripherals[mac] = device
+
+        var temp: Double = 0
+        for frame in fh.advFrames ?? [] {
+          if frame.frameType == MTIFrameHTSensor, let htf = frame as? MTITempHumiFrame {
+            temp = htf.temp; break
+          }
+          if frame.frameType == MTSModelTypeAssetTemTagInfo, let otf = frame as? MTIOnlyTempFrame {
+            temp = otf.temp; break
+          }
+        }
+
         found.append([
-          "mac": mac,
-          "name": device.broadcast?.name ?? "",
-          "rssi": device.broadcast?.rssi ?? 0,
-          "temp": device.broadcast?.temp ?? 0,
-          "battery": device.broadcast?.battery ?? 0,
+          "mac":     mac,
+          "name":    fh.name ?? "",
+          "rssi":    fh.rssi,
+          "battery": fh.battery,
+          "temp":    temp,
         ])
       }
       self.sendEvent(withName: "onDeviceFound", body: found)
@@ -123,7 +135,7 @@ class MinewBleModule: RCTEventEmitter {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
-      let peripheral = self.central?.scannedPeris?.first(where: { $0.broadcast?.mac == mac })
+      let peripheral = self.central?.scannedPeris?.first(where: { $0.frameHandler?.mac == mac })
                     ?? self.peripherals[mac]
       guard let peripheral = peripheral else {
         self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "DeviceNotFound"])
@@ -131,67 +143,84 @@ class MinewBleModule: RCTEventEmitter {
       }
 
       self.central?.stopScan()
-      // connect() sets peripheral.connector synchronously before returning.
-      self.central?.connect(toPeriperal: peripheral)
-      print("[BLE] connect called, connector nil: \(peripheral.connector == nil)")
 
-      // Give the proxy the connector so it can set CBPeripheral.delegate
-      // before the SDK's centralManager:didConnectPeripheral: body runs.
-      self.proxyDelegate?.pendingConnector = peripheral.connector
+      var keys = [password]
+      for k in self.secretKeys where k != password { keys.append(k) }
 
-      // Keep a strong reference so ARC doesn't collect the connector while
-      // CBPeripheral.delegate (a weak property) still points to it.
-      if let connector = peripheral.connector {
-        self.connectorCache[mac] = connector
-      }
-
-      self.registerConnectorCallback(peripheral: peripheral, mac: mac, password: password)
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-        guard let self = self else { return }
-        self.registerConnectorCallback(peripheral: peripheral, mac: mac, password: password)
-      }
+      self.attemptConnect(peripheral: peripheral, mac: mac, keys: keys, keyIndex: 0)
     }
   }
 
-  private func registerConnectorCallback(peripheral: MTPeripheralV3, mac: String, password: String) {
-    guard let connector = peripheral.connector else { return }
-    connectorCache[mac] = connector
-    connector.didChangeConnection { [weak self] connection in
-      guard let self = self else { return }
-      switch connection.rawValue {
-      case 0: // Disconnected
-        self.connected.removeValue(forKey: mac)
-        self.connectorCache.removeValue(forKey: mac)
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Disconnected"])
-      case 2: // Connecting
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connecting"])
-      case 1: // Connected
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
-      case 3: // Validating
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-          self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: 0)
-        }
-      case 4: // Vaildated
-        self.connected[mac] = peripheral
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
-      default:
-        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
-      }
-    }
-  }
-
-  private func tryPassword(peripheral: MTPeripheralV3, mac: String, password: String, keyIndex: Int) {
-    var keys = [password]
-    for k in secretKeys where k != password { keys.append(k) }
+  private func attemptConnect(peripheral: MTIPeripheral, mac: String, keys: [String], keyIndex: Int) {
     guard keyIndex < keys.count else {
       sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
       return
     }
-    peripheral.connector?.sensorHandler.writePassword(keys[keyIndex]) { [weak self] success in
+
+    central?.connectToPeriperal(peripheral, secretKey: keys[keyIndex])
+    proxyDelegate?.pendingConnector = peripheral.connector
+    if let connector = peripheral.connector {
+      connectorCache[mac] = connector
+    }
+
+    registerConnectorCallback(peripheral: peripheral, mac: mac, keys: keys, keyIndex: keyIndex)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
       guard let self = self else { return }
-      if !success && keyIndex + 1 < keys.count {
-        self.tryPassword(peripheral: peripheral, mac: mac, password: password, keyIndex: keyIndex + 1)
+      self.registerConnectorCallback(peripheral: peripheral, mac: mac, keys: keys, keyIndex: keyIndex)
+    }
+  }
+
+  private func registerConnectorCallback(peripheral: MTIPeripheral, mac: String,
+                                          keys: [String], keyIndex: Int) {
+    guard let connector = peripheral.connector else { return }
+    connectorCache[mac] = connector
+
+    connector.didChangeConnection { [weak self] connection in
+      guard let self = self else { return }
+      switch connection.rawValue {
+      case 0: // Disconnected
+        if self.retryingMacs.contains(mac) { return }
+        self.connected.removeValue(forKey: mac)
+        self.connectorCache.removeValue(forKey: mac)
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Disconnected"])
+
+      case 2: // Connecting
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connecting"])
+
+      case 1: // Connected
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Connected"])
+
+      case 3: // Validating
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "Validating"])
+
+      case 4: // Vaildated — success
+        self.retryingMacs.remove(mac)
+        self.connected[mac] = peripheral
+        self.connectorCache.removeValue(forKey: mac)
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ConnectComplete"])
+
+      case 5: // VaildateFailed
+        self.connected.removeValue(forKey: mac)
+        self.connectorCache.removeValue(forKey: mac)
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
+
+      case 6: // PasswordVaildateFailed — wrong key, try next
+        self.connectorCache.removeValue(forKey: mac)
+        let nextIndex = keyIndex + 1
+        if nextIndex < keys.count {
+          self.retryingMacs.insert(mac)
+          self.central?.disconnectFromPeriperal(peripheral)
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.retryingMacs.remove(mac)
+            self.attemptConnect(peripheral: peripheral, mac: mac, keys: keys, keyIndex: nextIndex)
+          }
+        } else {
+          self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
+        }
+
+      default:
+        self.sendEvent(withName: "onConnStateChange", body: ["mac": mac, "state": "ValidateFailed"])
       }
     }
   }
@@ -200,7 +229,7 @@ class MinewBleModule: RCTEventEmitter {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       guard let peripheral = self.connected[mac] ?? self.peripherals[mac] else { return }
-      self.central?.disconnect(fromPeriperal: peripheral)
+      self.central?.disconnectFromPeriperal(peripheral)
       self.connected.removeValue(forKey: mac)
       self.connectorCache.removeValue(forKey: mac)
     }
@@ -208,7 +237,7 @@ class MinewBleModule: RCTEventEmitter {
 
   // MARK: - History
 
-  // htModel: 0 = PR2122, 1 = MST01 (MST03 uses MST01 model)
+  // htModel: 0 = PR2122, 1 = MST01, 2 = MST03 (asset temperature tag)
   @objc func queryHistory(_ mac: String, startTs: Double, endTs: Double, htModel: Int) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
@@ -221,31 +250,45 @@ class MinewBleModule: RCTEventEmitter {
       formatter.dateFormat = "yyyy/MM/dd HH:mm:ss"
       formatter.timeZone = TimeZone.current
 
-      let modelType = MTHTModel(rawValue: UInt(htModel == 0 ? 0 : 1)) ?? MTHTModel(rawValue: 1)!
-      let unitType = MTTemperatureUnitType(rawValue: 0)!
+      let now = Date().timeIntervalSince1970
+      let startInterval: TimeInterval = startTs > 0 ? startTs : 0
+      let endInterval: TimeInterval   = endTs   > 0 ? endTs   : now
 
-      peripheral.connector?.sensorHandler.readHTHistory(
-        with: formatter,
-        unit: unitType,
-        deviceHTModelType: modelType
-      ) { [weak self] success, _, data in
-        guard let self = self else { return }
-        guard success else {
-          self.sendEvent(withName: "onHistoryData", body: ["mac": mac, "error": "ReadFailed", "data": []])
-          return
+      if htModel == 2 {
+        // MST03 asset temperature tag
+        peripheral.connector?.sensorHandler.readAssetTemHistory(
+          with: formatter,
+          startTimeInterval: startInterval,
+          endTimeInterval: endInterval,
+          systemTimeInterval: now
+        ) { [weak self] success, _, data in
+          self?.emitHistory(mac: mac, success: success, data: data)
         }
-
-        let filtered = data.filter { record in
-          guard startTs > 0 || endTs > 0 else { return true }
-          let ts = record.timeInterval
-          return (startTs <= 0 || ts >= startTs) && (endTs <= 0 || ts <= endTs)
+      } else {
+        // MST01 / PR2122 industrial HT sensor
+        let modelType = MTIHTModel(rawValue: UInt(htModel)) ?? MTIHTModel(rawValue: 1)!
+        peripheral.connector?.sensorHandler.readHTHistory(
+          with: formatter,
+          unit: MTITemperatureUnitType(rawValue: 0)!,
+          startTimeInterval: startInterval,
+          endTimeInterval: endInterval,
+          systemTimeInterval: now,
+          deviceHTModelType: modelType
+        ) { [weak self] success, _, data in
+          self?.emitHistory(mac: mac, success: success, data: data)
         }
-
-        let points: [[String: Any]] = filtered.map { record in
-          ["timestamp": record.timeInterval, "temperature": record.temp, "humidity": record.humi]
-        }
-        self.sendEvent(withName: "onHistoryData", body: ["mac": mac, "error": NSNull(), "data": points])
       }
     }
+  }
+
+  private func emitHistory(mac: String, success: Bool, data: [MTIHistoryData]?) {
+    guard success, let records = data else {
+      sendEvent(withName: "onHistoryData", body: ["mac": mac, "error": "ReadFailed", "data": []])
+      return
+    }
+    let points: [[String: Any]] = records.map { r in
+      ["timestamp": r.timeInterval, "temperature": r.temp, "humidity": r.humi]
+    }
+    sendEvent(withName: "onHistoryData", body: ["mac": mac, "error": NSNull(), "data": points])
   }
 }

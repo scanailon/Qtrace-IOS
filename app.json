@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -17,14 +16,18 @@
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Se necesita Bluetooth para conectar sensores de temperatura Minew MST03.",
         "NSBluetoothPeripheralUsageDescription": "Se necesita Bluetooth para conectar sensores de temperatura Minew MST03."
-      }
+      },
+      "bundleIdentifier": "com.anonymous.QTrace"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,7 +41,8 @@
         {
           "cameraPermission": "Se necesita la cámara para escanear el código QR del sensor."
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }
